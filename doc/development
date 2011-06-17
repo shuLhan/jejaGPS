@@ -1,0 +1,36 @@
+ Client
+========
+
+ Software Prerequisite
+-----------------------
+
+	+ Python 2.7
+	+ pywin32 release 216 or greater for Python 2.7.
+	+ py2exe for Python 2.7
+
+ Windows :: Building Executable
+--------------------------------
+
+	$ python build.py py2exe
+
+	check for required dll, copy to ./dist directory.
+
+
+ Server
+========
+
+ Software Prerequisite
+-----------------------
+
+	+ Postgresql 9.0.4
+
+ Installation
+--------------
+
+* Create Database
+
+	- login as user postgres
+
+	$ createuser gpsdb
+	$ createdb --owner=gpsdb gpsdb
+	$ psql --user=gpsdb --dbname=gpsdb --file src/GPSServer/db/structure.sql
