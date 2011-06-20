@@ -1,5 +1,5 @@
-drop table trail if exists;
-drop table client if exists;
+drop table if exists trail;
+drop table if exists client;
 
 create table client (
 	id		varchar(64)	primary key

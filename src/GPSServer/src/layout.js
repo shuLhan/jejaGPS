@@ -3,11 +3,12 @@ var gmap_opts		= {
  ,	mapTypeId	:google.maps.MapTypeId.ROADMAP
 };
 
-var gmap_use		= false;
+var gmap_use		= true;
 var gmap_init_loc;
 var gmap_loc_monas	= new google.maps.LatLng(-6.172982, 106.826935);
 var gmap_support_flag	= new Boolean();
 var gmap;
+var _g_id_gps		= "";
 
 Ext.require([
 	"Ext.Button"
@@ -35,6 +36,7 @@ Ext.onReady(function() {
 		icon	:"js/extjs/resources/themes/images/default/grid/refresh.gif"
 	,	handler	:function() {
 			store_idgps.load();
+			store_trail_load();
 		}
 	});
 
@@ -48,7 +50,8 @@ Ext.onReady(function() {
 	,	forceSelection	:true
 	,	listeners	:{
 			"select":function(form, value) {
-				form_idgps_on_select (value[0].data.name)
+				_g_id_gps = value[0].data.name;
+				store_trail_load();
 			}
 		}
 	});
@@ -88,17 +91,20 @@ Ext.onReady(function() {
 		,	button_ref
 		]
 	,	listeners	:{
-			"itemdblclick":function(view, record, el, idx, event){
+			itemdblclick:function(view, record, el, idx, event){
 				grid_trail_itemdblclick (record);
 			}
 		}
 	});
 
-	function form_idgps_on_select (v)
+	function store_trail_load ()
 	{
+		if (_g_id_gps == "") {
+			return;
+		}
 		store_trail.load({
 			params	:{
-				id_gps:v
+				id_gps:_g_id_gps
 			}
 		});
 	}
@@ -109,7 +115,7 @@ Ext.onReady(function() {
 
 		console.log(gps_id +':'+ r.get("latitude") +':'+ r.get("longitude"));
 
-		if (!gps_use) {
+		if (!gmap_use) {
 			return;
 		}
 

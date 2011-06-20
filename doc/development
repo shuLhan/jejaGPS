@@ -23,6 +23,9 @@
 -----------------------
 
 	+ Postgresql 9.0.4
+	+ Python 2.7
+	+ Python psycopg2 2.4.1 (postgresql client for python)
+	+ Web Server (lighttpd / Apache)
 
  Installation
 --------------
