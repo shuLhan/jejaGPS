@@ -9,7 +9,8 @@ create table client (
 create table trail (
 	id		serial		primary key
 ,	id_gps		varchar(64)
-,	dt_retrieved	timestamp
+,	dt_gps		timestamp
+,	dt_retrieved	timestamp	default now()
 ,	latitude	varchar(12)
 ,	longitude	varchar(12)
 );

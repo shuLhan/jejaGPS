@@ -60,6 +60,7 @@ Ext.onReady(function() {
 	var store_trail	= Ext.create('Ext.data.Store', {
 		fields	:[
 			"dt_retrieved"
+		,	"dt_gps"
 		,	"latitude"
 		,	"longitude"
 		]
@@ -81,8 +82,8 @@ Ext.onReady(function() {
 	,	height		:"100%"
 	,	width		:300
 	,	columns		:[{
-			header		:"Date Retrieved"
-		,	dataIndex	:"dt_retrieved"
+			header		:"Date GPS"
+		,	dataIndex	:"dt_gps"
 		,	align		:"center"
 		,	flex		:1
 		}]
@@ -131,13 +132,13 @@ Ext.onReady(function() {
 		,	fillColor	:"#00cc00"
 		,	fillOpacity	:0.35
 		,	map		:gmap
-		,	title		:gps_id +" at "+ r.get("dt_retrieved")
+		,	title		:gps_id +" at "+ r.get("dt_gps")
 		});
 
 		marker	= new google.maps.Marker({
 			position	:gmap_ll
 		,	map		:gmap
-		,	title		:gps_id +" at "+ r.get("dt_retrieved")
+		,	title		:gps_id +" at "+ r.get("dt_gps")
 		});
 
 		gmap.setZoom(16);
