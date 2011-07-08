@@ -4,6 +4,9 @@ var gmap_init_loc;
 var gmap_loc_monas;
 var gmap_support_flag	= new Boolean();
 var gmap;
+var gmap_markers	= [];
+var gmap_circles	= [];
+var gmap_polylines	= [];
 var _g_id_gps		= "";
 
 Ext.require([
@@ -129,13 +132,24 @@ Ext.onReady(function() {
 		}
 	});
 
+	var btn_clear_mark	= Ext.create("Ext.button.Button", {
+		text		:"Clear Mark"
+	,	baseCls		:"x-btn-pressed"
+	,	handler		:function() {
+			btn_clear_mark_onclick ();
+		}
+	});
+
 	var btn_create_path	= Ext.create("Ext.button.Button", {
 		text		:"Create Path"
 	,	baseCls		:"x-btn-pressed"
 	,	disabled	:true
+	,	handler		:function() {
+			btn_create_path_onclick ();
+		}
 	});
 
-	var grid_sm		= Ext.create("Ext.selection.CheckboxModel", {
+	var grid_selmodel	= Ext.create("Ext.selection.CheckboxModel", {
 		listeners	: {
 			selectionchange: function(sm, selections) {
 				btn_create_path.setDisabled(selections.length == 0);
@@ -146,7 +160,7 @@ Ext.onReady(function() {
 	var grid_trail		= Ext.create("Ext.grid.Panel", {
 		store		:store_trail
 	,	region		:"center"
-	,	selModel	:grid_sm
+	,	selModel	:grid_selmodel
 	,	autoScroll	:true
 	,	columns			:[{
 			header		:"GPS Date"
@@ -155,8 +169,8 @@ Ext.onReady(function() {
 		,	flex		:1
 		}]
 	,	listeners	:{
-			itemdblclick:function(view, record, el, idx, event){
-				grid_trail_itemdblclick (record);
+			itemdblclick:function(view, record, el, idx, e, opt){
+				grid_trail_itemdblclick (record, true);
 			}
 		}
 	});
@@ -176,7 +190,8 @@ Ext.onReady(function() {
 		,	grid_trail
 		]
 	,	bbar		:[
-			"->"
+			btn_clear_mark
+		,	"->"
 		,	btn_create_path
 		]
 	});
@@ -240,7 +255,7 @@ Ext.onReady(function() {
 		});
 	}
 
-	function grid_trail_itemdblclick (r)
+	function grid_trail_itemdblclick (r, zandc)
 	{
 		gps_id	= form_idgps.getValue();
 
@@ -271,8 +286,89 @@ Ext.onReady(function() {
 		,	title		:gps_id +" at "+ r.get("dt_gps")
 		});
 
+		gmap_circles.push(circle);
+		gmap_markers.push(marker);
+
+		if (zandc) {
+			gmap.setZoom(16);
+			gmap.setCenter(gmap_ll);
+		}
+
+		return gmap_ll;
+	}
+
+	function sort_records_by_dt_gps (a, b)
+	{
+		var aa = a.data["dt_gps"];
+		var bb = b.data["dt_gps"];
+
+		if (aa < bb) {
+			return -1;
+		}
+		if (aa > bb) {
+			return 1;
+		}
+		return 0;
+	}
+
+	function btn_create_path_onclick ()
+	{
+		var recs = grid_selmodel.getSelection();
+		if (!recs) {
+			return;
+		}
+		if (recs.length == 1) {
+			return grid_trail_itemdblclick (recs[0], true);
+		}
+
+		recs.sort(sort_records_by_dt_gps);
+
+		var path = [];
+		var ll;
+
+		for (i = 0; i < recs.length; i++) {
+			ll = grid_trail_itemdblclick (recs[i], false);
+
+			path.push(ll);
+		}
+
+		var polyline = new google.maps.Polyline ({
+			path		:path
+		,	strokeColor	:"#FF0000"
+		,	strokeOpacity	:1.0
+		,	strokeWeight	:2
+		});
+
+		polyline.setMap(gmap);
+
 		gmap.setZoom(16);
-		gmap.setCenter(gmap_ll);
+		gmap.setCenter(ll);
+
+		gmap_polylines.push(polyline);
+	}
+
+	function btn_clear_mark_onclick ()
+	{
+		if (gmap_polylines) {
+			for (i in gmap_polylines) {
+				gmap_polylines[i].setMap(null);
+			}
+			gmap_polylines.length = 0;
+		}
+
+		if (gmap_markers) {
+			for (i in gmap_markers) {
+				gmap_markers[i].setMap(null);
+			}
+			gmap_markers.length = 0;
+		}
+
+		if (gmap_circles) {
+			for (i in gmap_circles) {
+				gmap_circles[i].setMap(null);
+			}
+			gmap_circles.length = 0;
+		}
 	}
 
 	/* GMap init */
