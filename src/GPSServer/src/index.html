@@ -3,21 +3,20 @@
 <title>JejaGPS</title>
 <link rel="stylesheet" type="text/css" href="/js/extjs/resources/css/ext-all.css"/>
 <style type="text/css">
-html { height: 100% }
+html { height: 100%; margin: 0px; padding: 0px }
 body { height: 100%; margin: 0px; padding: 0px }
 #map_canvas {
-	position	:absolute;
 	height		:100%;
-	display		:block;
-	padding		:10px;
-	margin-left	:30%;
-	float		:left;
-	border		:1px solid #cce;
+	margin		:0px 0px 0px 300px;
+	border		:10px solid #ddd;
+	background	:silver;
 }
 #trail {
-	position:absolute;
-	display	:block;
-	float	:left;
+	height		:100%;
+	margin		:0px 300px 0px 0px;
+	width		:300px;
+	float		:left;
+	background	:black;
 }
 </style>
 
@@ -35,10 +34,9 @@ body { height: 100%; margin: 0px; padding: 0px }
 <script type="text/javascript" src="/layout.js"></script>
 </head>
 <body>
-<div id="trail" style="width=300; height:100%;">
+<div id="trail">
 </div>
-<div map="map_canvas" id="map_canvas"
-	style="width:70%; height:100%; float:left;">
+<div map="map_canvas" id="map_canvas">
 </div>
 </body>
 </html>

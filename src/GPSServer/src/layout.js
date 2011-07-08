@@ -1,11 +1,7 @@
-var gmap_opts		= {
-	zoom		:12
- ,	mapTypeId	:google.maps.MapTypeId.ROADMAP
-};
-
-var gmap_use		= false;
+var gmap_opts;
+var gmap_use		= true;
 var gmap_init_loc;
-var gmap_loc_monas	= new google.maps.LatLng(-6.172982, 106.826935);
+var gmap_loc_monas;
 var gmap_support_flag	= new Boolean();
 var gmap;
 var _g_id_gps		= "";
@@ -16,10 +12,6 @@ Ext.require([
 ,	"Ext.form.ComboBox"
 ,	"Ext.grid.Panel"
 ]);
-
-function JejaGPSFilter ()
-{
-}
 
 Ext.onReady(function() {
 	/* form idgps: select gps by id */
@@ -105,10 +97,12 @@ Ext.onReady(function() {
 		]
 	});
 
-	var fs_dt_filter	= Ext.create("Ext.form.FieldSet", {
+	var fs_dt_filter	= Ext.create("Ext.form.Panel", {
 		title		:"Filter GPS Date"
+	,	region		:"north"
 	,	margin		:'5 0 0 0'
-	,	checkboxToggle	:true
+	,	bodyPadding	:5
+	,	collapsible	:true
 	,	collapsed	:true
 	,	items		:[
 			fs_dt_after
@@ -135,19 +129,30 @@ Ext.onReady(function() {
 		}
 	});
 
+	var btn_create_path	= Ext.create("Ext.button.Button", {
+		text		:"Create Path"
+	,	baseCls		:"x-btn-pressed"
+	,	disabled	:true
+	});
+
+	var grid_sm		= Ext.create("Ext.selection.CheckboxModel", {
+		listeners	: {
+			selectionchange: function(sm, selections) {
+				btn_create_path.setDisabled(selections.length == 0);
+			}
+		}
+	});
 
 	var grid_trail		= Ext.create("Ext.grid.Panel", {
 		store		:store_trail
+	,	region		:"center"
+	,	selModel	:grid_sm
 	,	autoScroll	:true
-	,	height		:"100%"
-	,	columns		:[{
+	,	columns			:[{
 			header		:"GPS Date"
 		,	dataIndex	:"dt_gps"
 		,	align		:"center"
 		,	flex		:1
-		,	filter		:{
-				type	:'date'
-			}
 		}]
 	,	listeners	:{
 			itemdblclick:function(view, record, el, idx, event){
@@ -158,8 +163,9 @@ Ext.onReady(function() {
 
 	var panel		= Ext.create("Ext.panel.Panel", {
 		renderTo	:"trail"
+	,	layout		:"border"
 	,	height		:"100%"
-	,	width		:300
+	,	autoScroll	:true
 	,	frame		:true
 	,	tbar		:[
 			form_idgps
@@ -169,7 +175,36 @@ Ext.onReady(function() {
 			fs_dt_filter
 		,	grid_trail
 		]
+	,	bbar		:[
+			"->"
+		,	btn_create_path
+		]
 	});
+
+	function get_current_date()
+	{
+		var now		= new Date();
+		var y		= now.getFullYear();
+		var m		= now.getMonth() + 1;
+		var d		= now.getDate();
+		var v		= "";
+
+		v = y +"-";
+
+		if (m < 10) {
+			v += "0"+ m +"-";
+		} else {
+			v += m +"-";
+		}
+
+		if (d < 10) {
+			v += "0"+ d;
+		} else {
+			v += d;
+		}
+
+		return v;
+	}
 
 	function store_trail_load ()
 	{
@@ -177,28 +212,20 @@ Ext.onReady(function() {
 			return;
 		}
 
-		var now		= new Date();
-		var y		= now.getFullYear();
-		var m		= now.getMonth() + 1;
-		var d		= now.getDate();
-		var date_after	= form_date_after.getRawValue();
-		var time_after	= form_time_after.getRawValue();
-		var date_before	= form_date_before.getRawValue();
-		var time_before	= form_time_before.getRawValue();
+		var date_after	= "";
+		var time_after	= "";
+		var date_before	= "";
+		var time_before	= "";
 
-		if (!date_after && !date_before) {
-			date_after = y +"-";
+		if (fs_dt_filter.collapsed) {
+			date_after = get_current_date ();
+		} else {
+			date_before	= form_date_before.getRawValue();
+			time_after	= form_time_after.getRawValue();
+			time_before	= form_time_before.getRawValue();
 
-			if (m < 10) {
-				date_after += "0"+ m +"-";
-			} else {
-				date_after += m +"-";
-			}
-
-			if (d < 10) {
-				date_after += "0"+ d;
-			} else {
-				date_after += d;
+			if (date_before == "") {
+				date_after = get_current_date ();
 			}
 		}
 
@@ -301,6 +328,13 @@ Ext.onReady(function() {
 	store_idgps.load();
 
 	if (gmap_use) {
+		gmap_opts		= {
+			zoom		:12
+		 ,	mapTypeId	:google.maps.MapTypeId.ROADMAP
+		};
+
+		gmap_loc_monas = new google.maps.LatLng(-6.172982, 106.826935);
+
 		gmap_init();
 	}
 });
