@@ -12,9 +12,13 @@ try:
 	print "Content-Type: text/plain"
 	print
 
-	form	= cgi.FieldStorage()
-	id_gps	=form["id_gps"].value
-	o	="{data:["
+	form		= cgi.FieldStorage(keep_blank_values=1)
+	id_gps		= form["id_gps"].value
+	date_after	= form["date_after"].value
+	time_after	= form["time_after"].value
+	date_before	= form["date_before"].value
+	time_before	= form["time_before"].value
+	o		="{data:["
 
 	conn	= psycopg2.connect(host="127.0.0.1", database="gpsdb", user="gpsdb", password="gpsdb")
 	cur	= conn.cursor()
@@ -25,7 +29,22 @@ try:
 		+" ,		longitude"		\
 		+" from		trail"			\
 		+" where	id_gps = %s"		\
-		+" order by	dt_gps desc";
+
+	if (date_after != ""):
+		q += " and dt_gps >= '"+ date_after
+		if (time_after != ""):
+			q += " "+ time_after
+		q += "'"
+
+	if (date_before != ""):
+		q += " and dt_gps <= '"+ date_before
+		if (time_before != ""):
+			q += " "+ time_before
+		q += "'"
+	elif (time_before != ""):
+		q += " and dt_gps <= '"+ date_after +" "+ time_before +"'"
+
+	q	+= " order by dt_gps desc"
 
 	data	=(id_gps,)
 
@@ -43,5 +62,4 @@ try:
 
 	print o
 except:
-	print sys.exc_info()
 	print "{success:false,info:'Error retrieving data trail!'}"

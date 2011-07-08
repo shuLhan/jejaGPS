@@ -37,3 +37,13 @@
 	$ createuser gpsdb
 	$ createdb --owner=gpsdb gpsdb
 	$ psql --user=gpsdb --dbname=gpsdb --file src/GPSServer/db/structure.sql
+
+* export table to csv
+
+	$ psql -U gpsdb gpsdb
+	gspdb=# \copy trail to 'trail.csv' delimiters ',';
+
+* import csv to table
+
+	$ psql -U gspdb gpsdb
+	gpsdb=# \copy trail from 'trail.csv' delimiters ',';

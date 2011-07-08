@@ -3,7 +3,7 @@ var gmap_opts		= {
  ,	mapTypeId	:google.maps.MapTypeId.ROADMAP
 };
 
-var gmap_use		= true;
+var gmap_use		= false;
 var gmap_init_loc;
 var gmap_loc_monas	= new google.maps.LatLng(-6.172982, 106.826935);
 var gmap_support_flag	= new Boolean();
@@ -16,6 +16,10 @@ Ext.require([
 ,	"Ext.form.ComboBox"
 ,	"Ext.grid.Panel"
 ]);
+
+function JejaGPSFilter ()
+{
+}
 
 Ext.onReady(function() {
 	/* form idgps: select gps by id */
@@ -56,6 +60,62 @@ Ext.onReady(function() {
 		}
 	});
 
+/*
+ * GPS date form filter
+ */
+	var form_date_after	= Ext.create("Ext.form.field.Date", {
+		fieldLabel	:"Date"
+	,	labelWidth	:60
+	,	labelAlign	:"right"
+	,	format		:"Y-m-d"
+	});
+	var form_time_after	= Ext.create("Ext.form.field.Time", {
+		fieldLabel	:"Time"
+	,	labelWidth	:60
+	,	labelAlign	:"right"
+	,	format		:"H:i"
+	});
+
+	var form_date_before	= Ext.create("Ext.form.field.Date", {
+		fieldLabel	:"Date"
+	,	labelWidth	:60
+	,	labelAlign	:"right"
+	,	format		:"Y-m-d"
+	});
+	var form_time_before	= Ext.create("Ext.form.field.Time", {
+		fieldLabel	:"Time"
+	,	labelWidth	:60
+	,	labelAlign	:"right"
+	,	format		:"H:i"
+	});
+
+	var fs_dt_after		= Ext.create("Ext.form.FieldSet", {
+		title		:"After"
+	,	items		:[
+			form_date_after
+		,	form_time_after
+		]
+	});
+
+	var fs_dt_before	= Ext.create("Ext.form.FieldSet", {
+		title		:"Before"
+	,	items		:[
+			form_date_before
+		,	form_time_before
+		]
+	});
+
+	var fs_dt_filter	= Ext.create("Ext.form.FieldSet", {
+		title		:"Filter GPS Date"
+	,	margin		:'5 0 0 0'
+	,	checkboxToggle	:true
+	,	collapsed	:true
+	,	items		:[
+			fs_dt_after
+		,	fs_dt_before
+		]
+	});
+
 	/* grid trail: display all trail data */
 	var store_trail	= Ext.create('Ext.data.Store', {
 		fields	:[
@@ -75,22 +135,20 @@ Ext.onReady(function() {
 		}
 	});
 
+
 	var grid_trail		= Ext.create("Ext.grid.Panel", {
-		renderTo	:"trail"
-	,	store		:store_trail
+		store		:store_trail
 	,	autoScroll	:true
 	,	height		:"100%"
-	,	width		:300
 	,	columns		:[{
-			header		:"Date GPS"
+			header		:"GPS Date"
 		,	dataIndex	:"dt_gps"
 		,	align		:"center"
 		,	flex		:1
+		,	filter		:{
+				type	:'date'
+			}
 		}]
-	,	tbar		:[
-			form_idgps
-		,	button_ref
-		]
 	,	listeners	:{
 			itemdblclick:function(view, record, el, idx, event){
 				grid_trail_itemdblclick (record);
@@ -98,14 +156,59 @@ Ext.onReady(function() {
 		}
 	});
 
+	var panel		= Ext.create("Ext.panel.Panel", {
+		renderTo	:"trail"
+	,	height		:"100%"
+	,	width		:300
+	,	frame		:true
+	,	tbar		:[
+			form_idgps
+		,	button_ref
+		]
+	,	items		:[
+			fs_dt_filter
+		,	grid_trail
+		]
+	});
+
 	function store_trail_load ()
 	{
 		if (_g_id_gps == "") {
 			return;
 		}
+
+		var now		= new Date();
+		var y		= now.getFullYear();
+		var m		= now.getMonth() + 1;
+		var d		= now.getDate();
+		var date_after	= form_date_after.getRawValue();
+		var time_after	= form_time_after.getRawValue();
+		var date_before	= form_date_before.getRawValue();
+		var time_before	= form_time_before.getRawValue();
+
+		if (!date_after && !date_before) {
+			date_after = y +"-";
+
+			if (m < 10) {
+				date_after += "0"+ m +"-";
+			} else {
+				date_after += m +"-";
+			}
+
+			if (d < 10) {
+				date_after += "0"+ d;
+			} else {
+				date_after += d;
+			}
+		}
+
 		store_trail.load({
 			params	:{
-				id_gps:_g_id_gps
+				id_gps		:_g_id_gps
+			,	date_after	:date_after
+			,	time_after	:time_after
+			,	date_before	:date_before
+			,	time_before	:time_before
 			}
 		});
 	}
