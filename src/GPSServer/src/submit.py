@@ -1,13 +1,15 @@
 #!/usr/bin/python2
 
+import sys
 import cgi
 import cgitb
 import psycopg2
 
+sys.stderr = sys.stdout
 cgitb.enable()
 
 try:
-	form		= cgi.FieldStorage()
+	form		= cgi.FieldStorage(keep_blank_values=1)
 	id_gps		= form["id"].value
 	dt_gps		= form["datetime"].value
 	latitude	= form["latitude"].value
@@ -36,5 +38,7 @@ try:
 	print "dt_gps		: ", dt_gps
 	print "latitude 	: ", latitude
 	print "longitude	: ", longitude
+
+	print "{success:true,info:'Success'}"
 except:
-	print "{success:false,info:'Error submiting gpsclient to database'}"
+	print "{success:false,info:'Error submitting gpsclient data to database'}"
