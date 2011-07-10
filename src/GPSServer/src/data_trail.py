@@ -62,4 +62,4 @@ try:
 
 	print o
 except:
-	print "{success:false,info:'Error retrieving data trail!'}"
+	print '{"success":false,"info":"Error retrieving data trail!"}'

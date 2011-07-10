@@ -18,7 +18,11 @@ import time
 import datetime
 import httplib
 import urllib
+import json
 import ConfigParser
+import csv
+import shutil
+import traceback
 
 sys.path.append ("./lib/")
 sys.path.append ("./lib/uspp")
@@ -28,10 +32,13 @@ from uspp import *
 class GPSClient:
 	_debug			= True
 	_cfg_file		= "jejagps.conf"
+	_tmp_file		= "jejagps.tmp"
+	_bak_file		= "jejagps.bak"
 	_id			= os.getenv("COMPUTERNAME")
 	_running		= 1
 	_date			= ""
 	_time			= ""
+	_datetime		= ""
 	_lat			= 0.0
 	_lng			= 0.0
 	_tty			= None
@@ -92,7 +99,7 @@ class GPSClient:
 				, self._tracker_send_dly)	\
 			)
 
-		print ("connecting to serial port ...")
+		print (">>> connecting to serial port ...")
 		self._tty = SerialPort (self._gps_port, None, self._gps_baud)
 
 		signal.signal (signal.SIGINT, self.sighandler)
@@ -132,9 +139,8 @@ class GPSClient:
 			@return : string time in UTC format.
 			@desc	: Convert GPS HHMMSS into HH:MM:SS UTC
 		"""
-		utc_str = ' +00:00'
 		t = datetime.time(int(data[:2]), int(data[2:4]), int(data[4:6]))
-		return t.strftime('%H:%M:%S') + utc_str
+		return t.strftime('%H:%M:%S')
 
 	def get_latitude (self, data, direction):
 		dot = data.find('.')
@@ -202,25 +208,117 @@ class GPSClient:
 	def decode_gpgga (self, r):
 		self._date	= self.get_date (None)
 		self._time	= self.get_time (r[1])
+		self._datetime	= self._date +" "+ self._time
 		self._lat	= self.get_latitude (r[2], r[3])
 		self._lng	= self.get_longitude (r[4], r[5])
 
 	def decode_gprmc (self, r):
 		self._date	= self.get_date (r[9])
 		self._time	= self.get_time (r[1])
+		self._datetime	= self._date +" "+ self._time
 		self._lat	= self.get_latitude (r[3],r[4])
 		self._lng	= self.get_longitude (r[5],r[6])
+
+	def save_gps_data (self, filename, gps_id, gps_dt, gps_lat, gps_lng):
+		if self._debug:
+			print ">>> saving data to '%s'" % filename
+		try:
+			writer = csv.writer (open(filename, "ab"))
+			writer.writerow([gps_id		\
+					, gps_dt	\
+					, gps_lat	\
+					, gps_lng	\
+					])
+		except:
+			if self._debug:
+				traceback.print_exc ()
+
+	#
+	# @desc: send gps data to the server, if fail save gps data to bak
+	# file.
+	#
+	def send_gps_data_once (self, gps_id, gps_dt, gps_lat, gps_lng):
+		try:
+			params = urllib.urlencode({
+				"id"		: gps_id
+			,	"datetime"	: gps_dt
+			,	"latitude"	: gps_lat
+			,	"longitude"	: gps_lng
+			})
+			headers = {
+				"Content-type"	: "application/x-www-form-urlencoded"
+			,	"Accept"	: "text/plain"
+			}
+
+			self._tracker_conn.request("POST", self._tracker_url\
+						, params, headers)
+
+			resp = self._tracker_conn.getresponse()
+			data = resp.read()
+
+			if self._debug:
+				print "> response status : %d" % resp.status
+				print "> response reason : %s" % resp.reason
+				print "> response data   : %s" % data
+
+			if resp.status != 200:
+				self.save_gps_data (self._bak_file, gps_id\
+						, gps_dt, gps_lat, gps_lng)
+			else:
+				o = json.loads (data)
+				if not o["success"]:
+					self.save_gps_data (self._bak_file\
+							, gps_id, gps_dt\
+							, gps_lat, gps_lng)
+
+			print ">>> Data sent successfully!"
+		except:
+			print "> send_gps_data_once: error"
+			if self._debug:
+				traceback.print_exc ()
+			self.save_gps_data (self._bak_file, gps_id, gps_dt\
+					, gps_lat, gps_lng)
+
+	#
+	# @desc: send all gps data in tmp, if fail move bak file as tmp file.
+	#
+	def send_gps_data (self):
+		try:
+			self._tracker_conn = httplib.HTTPConnection(self._tracker_addr)
+
+			if os.path.isfile (self._bak_file):
+				os.remove (self._bak_file)
+
+			r = csv.reader (open (self._tmp_file, "rb"));
+
+			for row in r:
+				self.send_gps_data_once (row[0], row[1], row[2], row[3])
+
+			self._tracker_conn.close()
+
+			del r;
+
+			if os.path.isfile (self._bak_file):
+				shutil.move (self._bak_file, self._tmp_file)
+			else: # all data send succesfully
+				os.remove (self._tmp_file)
+		except:
+			print "> send_gps_data: error"
+			if self._debug:
+				traceback.print_exc ()
+			if os.path.isfile (self._bak_file):
+				shutil.move (self._bak_file, self._tmp_file)
 
 	def run (self):
 		resp = None
 		while self._running:
 			self._tty.flush ()
-			print ("waiting for data ...")
+			print ("> waiting for data ...")
 			while self._running:
 				line = self._tty.readline ()
 
 				if (self._debug):
-					print ("line : ", line);
+					print ("> line : ", line);
 
 				r = self.validate (line)
 				if r == None:
@@ -233,31 +331,18 @@ class GPSClient:
 					self.decode_gprmc (r)
 				break
 
-			print ("id		: "+ self._id)
-			print ("date		: "+ self._date)
-			print ("time		: "+ self._time)
-			print ("latitude	: "+ self._lat)
-			print ("longitude	: "+ self._lng)
+			print ("> id		: "+ self._id)
+			print ("> datetime	: "+ self._datetime)
+			print ("> latitude	: "+ self._lat)
+			print ("> longitude	: "+ self._lng)
 
-			params = urllib.urlencode({
-				"id"		: self._id
-			,	"datetime"	: self._date +' '+ self._time
-			,	"latitude"	: self._lat
-			,	"longitude"	: self._lng
-			})
-			headers = {
-				"Content-type"	: "application/x-www-form-urlencoded"
-			,	"Accept"	: "text/plain"
-			}
+			# write current data to file temporary
+			self.save_gps_data (self._tmp_file, self._id	\
+					, self._datetime, self._lat	\
+					, self._lng)
 
 			if (self._tracker_mode == "http"):
-				self._tracker_conn = httplib.HTTPConnection(self._tracker_addr)
-				self._tracker_conn.request("POST", self._tracker_url, params, headers)
-				resp = self._tracker_conn.getresponse()
-				data = resp.read()
-				print resp.status, resp.reason
-				print data
-				self._tracker_conn.close()
+				self.send_gps_data ()
 
 			self._tty.flush ()
 			time.sleep(self._tracker_send_dly)
