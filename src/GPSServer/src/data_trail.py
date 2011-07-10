@@ -29,6 +29,8 @@ try:
 		+" ,		longitude"		\
 		+" from		trail"			\
 		+" where	id_gps = %s"		\
+		+" and		(latitude != '0'"	\
+		+" and		longitude != '0')"
 
 	if (date_after != ""):
 		q += " and dt_gps >= '"+ date_after

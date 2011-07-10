@@ -315,21 +315,27 @@ class GPSClient:
 			self._tty.flush ()
 			print ("> waiting for data ...")
 			while self._running:
-				line = self._tty.readline ()
+				try:
+					line = self._tty.readline ()
 
-				if (self._debug):
-					print ("> line : ", line);
+					if (self._debug):
+						print ("> line : ", line);
 
-				r = self.validate (line)
-				if r == None:
-					continue
-				if r[0] != self._gps_header:
-					continue
-				if r[0].upper() == "GPGGA":
-					self.decode_gpgga (r)
-				elif r[0].upper() == "GPRMC":
-					self.decode_gprmc (r)
-				break
+					r = self.validate (line)
+					if r == None:
+						continue
+					if r[0] != self._gps_header:
+						continue
+					if r[0].upper() == "GPGGA":
+						self.decode_gpgga (r)
+					elif r[0].upper() == "GPRMC":
+						self.decode_gprmc (r)
+					break
+				except:
+					self._datetime	= time.strftime("%Y-%m-%d %X", time.gmtime())
+					self._lat	= "0";
+					self._lng	= "0";
+					break
 
 			print ("> id		: "+ self._id)
 			print ("> datetime	: "+ self._datetime)

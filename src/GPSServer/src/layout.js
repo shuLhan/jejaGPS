@@ -258,15 +258,22 @@ Ext.onReady(function() {
 	function grid_trail_itemdblclick (r, zandc)
 	{
 		gps_id	= form_idgps.getValue();
+		lat	= r.get("latitude")
+		lng	= r.get("longitude")
+		dt	= r.get("dt_gps")
 
-		console.log(gps_id +':'+ r.get("latitude") +':'+ r.get("longitude"));
+		console.log(gps_id +':'+ lat +':'+ lng);
 
-		if (!gmap_use) {
+		if (!gmap_use || (lat == "0" && lng == "0")) {
 			return;
 		}
 
-		gmap_ll = new google.maps.LatLng(r.get("latitude")
-						, r.get("longitude"));
+		gmap_ll = new google.maps.LatLng(lat, lng);
+
+		title	= gps_id +"\n"
+			+"Latitude\t\t: "+ lat +"\n"
+			+"Longitude\t: "+ lng +"\n"
+			+"Time\t\t: "+ dt
 
 		circle = new google.maps.Circle({
 			center		:gmap_ll
@@ -277,13 +284,13 @@ Ext.onReady(function() {
 		,	fillColor	:"#00cc00"
 		,	fillOpacity	:0.35
 		,	map		:gmap
-		,	title		:gps_id +" at "+ r.get("dt_gps")
+		,	title		:title
 		});
 
 		marker	= new google.maps.Marker({
 			position	:gmap_ll
 		,	map		:gmap
-		,	title		:gps_id +" at "+ r.get("dt_gps")
+		,	title		:title
 		});
 
 		gmap_circles.push(circle);
