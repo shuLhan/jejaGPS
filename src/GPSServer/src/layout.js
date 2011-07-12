@@ -179,7 +179,6 @@ Ext.onReady(function() {
 		renderTo	:"trail"
 	,	layout		:"border"
 	,	height		:"100%"
-	,	autoScroll	:true
 	,	frame		:true
 	,	tbar		:[
 			form_idgps

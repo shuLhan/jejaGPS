@@ -42,6 +42,8 @@ try:
 		q += " and dt_gps <= '"+ date_before
 		if (time_before != ""):
 			q += " "+ time_before
+		else:
+			q += " 23:59:59"
 		q += "'"
 	elif (time_before != ""):
 		q += " and dt_gps <= '"+ date_after +" "+ time_before +"'"
