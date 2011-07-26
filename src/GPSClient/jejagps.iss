@@ -28,8 +28,13 @@ SolidCompression=yes
 Name: "english"; MessagesFile: "compiler:Default.isl"
 
 [Files]
-Source: "C:\Documents and Settings\developer\My Documents\GPSClient\dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "dist\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
+
+[Registry]
+Root: HKLM; Subkey: "Software\kilabit.org"; Flags: uninsdeletekeyifempty
+Root: HKLM; Subkey: "Software\kilabit.org\JejaGPS"; Flags: uninsdeletekey
+Root: HKLM; Subkey: "Software\kilabit.org\JejaGPS\InstallPath"; ValueType: string; ValueName: "Path"; ValueData: "{app}"

@@ -170,7 +170,7 @@ Ext.onReady(function() {
 		}]
 	,	listeners	:{
 			itemdblclick:function(view, record, el, idx, e, opt){
-				grid_trail_itemdblclick (record, true);
+				grid_trail_itemdblclick (record, true, -1);
 			}
 		}
 	});
@@ -254,7 +254,7 @@ Ext.onReady(function() {
 		});
 	}
 
-	function grid_trail_itemdblclick (r, zandc)
+	function grid_trail_itemdblclick (r, zandc, idx)
 	{
 		gps_id	= form_idgps.getValue();
 		lat	= r.get("latitude")
@@ -269,8 +269,13 @@ Ext.onReady(function() {
 
 		gmap_ll = new google.maps.LatLng(lat, lng);
 
-		title	= gps_id +"\n"
-			+"Latitude\t\t: "+ lat +"\n"
+		if (idx >= 0) {
+			title	= gps_id +" [#"+ idx +"]\n";
+		} else {
+			title	= gps_id +"\n";
+		}
+
+		title	+="Latitude\t\t: "+ lat +"\n"
 			+"Longitude\t: "+ lng +"\n"
 			+"Time\t\t: "+ dt
 
@@ -324,7 +329,7 @@ Ext.onReady(function() {
 			return;
 		}
 		if (recs.length == 1) {
-			return grid_trail_itemdblclick (recs[0], true);
+			return grid_trail_itemdblclick (recs[0], true, -1);
 		}
 
 		recs.sort(sort_records_by_dt_gps);
@@ -333,7 +338,7 @@ Ext.onReady(function() {
 		var ll;
 
 		for (i = 0; i < recs.length; i++) {
-			ll = grid_trail_itemdblclick (recs[i], false);
+			ll = grid_trail_itemdblclick (recs[i], false, i);
 
 			path.push(ll);
 		}

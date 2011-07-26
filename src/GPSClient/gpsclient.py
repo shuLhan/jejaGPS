@@ -12,7 +12,6 @@
 #
 
 import sys
-import signal
 import os
 import time
 import datetime
@@ -29,9 +28,15 @@ sys.path.append ("./lib/uspp")
 
 from uspp import *
 
-class GPSClient:
-	_debug			= True
-	_cfg_file		= "jejagps.conf"
+import win32service
+import win32serviceutil
+import win32event
+import win32evtlogutil
+import servicemanager
+
+class GPSClient (win32serviceutil.ServiceFramework):
+	_debug			= False
+	_cfg_file		= "C:\JejaGPS\jejagps.conf"
 	_tmp_file		= "jejagps.tmp"
 	_bak_file		= "jejagps.bak"
 	_id			= os.getenv("COMPUTERNAME")
@@ -50,24 +55,26 @@ class GPSClient:
 	_tracker_addr		= "127.0.0.1:8080"
 	_tracker_url		= "/submit.py"
 	_tracker_send_dly	= 60
+	_svc_name_		= "JejaGPS"
+	_svc_display_name_	= "JejaGPS"
+	_svc_deps_		= ["EventLog"]
 
-	def __init__(self				\
-			, gps_port="COM3"		\
-			, gps_baud=4800			\
-			, gps_header="GPRMC"		\
-			, tracker_mode="http"		\
-			, tracker_addr="127.0.0.1:8080"	\
-			, tracker_url="/submit.py"	\
-			, tracker_send_delay=60):
+	def __init__(self, args):
+		#
+		# init service
+		#
+		win32serviceutil.ServiceFramework.__init__(self,args)
+		self.hWaitStop = win32event.CreateEvent(None, 0, 0, None)
+
 		# read user configuration
 		cfg = ConfigParser.SafeConfigParser ({		\
-			"port"		:gps_port		\
-		,	"baud"		:gps_baud		\
-		,	"header"	:gps_header		\
-		,	"mode"		:tracker_mode		\
-		,	"address"	:tracker_addr		\
-		,	"url"		:tracker_url		\
-		,	"send delay"	:tracker_send_delay	\
+			"port"		:self._gps_port		\
+		,	"baud"		:self._gps_baud		\
+		,	"header"	:self._gps_header		\
+		,	"mode"		:self._tracker_mode		\
+		,	"address"	:self._tracker_addr		\
+		,	"url"		:self._tracker_url		\
+		,	"send delay"	:self._tracker_send_dly	\
 		})
 
 		cfg.read(self._cfg_file)
@@ -80,7 +87,7 @@ class GPSClient:
 		self._tracker_url	= cfg.get("Tracker", "URL")
 		self._tracker_send_dly	= cfg.getint("Tracker", "Send Delay")
 
-		if (self._debug):
+		if self._debug:
 			print	("\n[GPS]"			\
 				"\n Port	= %s"		\
 				"\n Baud	= %d"		\
@@ -88,8 +95,8 @@ class GPSClient:
 				"\n[Tracker]"			\
 				"\n Mode	= %s"		\
 				"\n Address	= %s"		\
-				"\n URL		= %s"		\
-				"\n Send Delay	= %d"		\
+				"\n URL		= %s"	\
+				"\n Send Delay	= %d"	\
 				% (self._gps_port		\
 				, self._gps_baud		\
 				, self._gps_header		\
@@ -98,11 +105,9 @@ class GPSClient:
 				, self._tracker_url		\
 				, self._tracker_send_dly)	\
 			)
+			print (">>> connecting to serial port ...")
 
-		print (">>> connecting to serial port ...")
 		self._tty = SerialPort (self._gps_port, None, self._gps_baud)
-
-		signal.signal (signal.SIGINT, self.sighandler)
 
 	def __del__(self):
 		if self._tty != None:
@@ -271,10 +276,11 @@ class GPSClient:
 							, gps_id, gps_dt\
 							, gps_lat, gps_lng)
 
-			print ">>> Data sent successfully!"
-		except:
-			print "> send_gps_data_once: error"
 			if self._debug:
+				print ">>> Data sent successfully!"
+		except:
+			if self._debug:
+				print "> send_gps_data_once: error"
 				traceback.print_exc ()
 			self.save_gps_data (self._bak_file, gps_id, gps_dt\
 					, gps_lat, gps_lng)
@@ -303,17 +309,19 @@ class GPSClient:
 			else: # all data send succesfully
 				os.remove (self._tmp_file)
 		except:
-			print "> send_gps_data: error"
 			if self._debug:
+				print "> send_gps_data: error"
 				traceback.print_exc ()
 			if os.path.isfile (self._bak_file):
 				shutil.move (self._bak_file, self._tmp_file)
 
 	def run (self):
+		servicemanager.LogInfoMsg("JejaGPS - is alive and well")
 		resp = None
 		while self._running:
 			self._tty.flush ()
-			print ("> waiting for data ...")
+			if self._debug:
+				print ("> waiting for data ...")
 			while self._running:
 				try:
 					line = self._tty.readline ()
@@ -337,10 +345,11 @@ class GPSClient:
 					self._lng	= "0";
 					break
 
-			print ("> id		: "+ self._id)
-			print ("> datetime	: "+ self._datetime)
-			print ("> latitude	: "+ self._lat)
-			print ("> longitude	: "+ self._lng)
+			if self._debug:
+				print ("> id		: "+ self._id)
+				print ("> datetime	: "+ self._datetime)
+				print ("> latitude	: "+ self._lat)
+				print ("> longitude	: "+ self._lng)
 
 			# write current data to file temporary
 			self.save_gps_data (self._tmp_file, self._id	\
@@ -351,10 +360,25 @@ class GPSClient:
 				self.send_gps_data ()
 
 			self._tty.flush ()
-			time.sleep(self._tracker_send_dly)
+			rc = win32event.WaitForSingleObject(self.hWaitStop, self._tracker_send_dly * 1000)
+			if rc == win32event.WAIT_OBJECT_0:
+				servicemanager.LogInfoMsg("JejaGPS - STOPPED")
+				break
 			self._tty.flush ()
 
+	def SvcStop (self):
+		self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
+		win32event.SetEvent(self.hWaitStop)
+		self._running = 0
+
+	def SvcDoRun (self):
+		win32evtlogutil.ReportEvent(self._svc_name_,
+					servicemanager.PYS_SERVICE_STARTED,
+					0,
+					servicemanager.EVENTLOG_INFORMATION_TYPE,
+					(self._svc_name_, ''))
+		self._running = 1
+		self.run ()
+
 if __name__ == "__main__":
-	gpsc = GPSClient ()
-	gpsc.run ()
-	del gpsc
+	win32serviceutil.HandleCommandLine(GPSClient)
